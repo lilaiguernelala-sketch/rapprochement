@@ -1,8 +1,10 @@
+import streamlit as st
 import pandas as pd
+import yaml
 import unicodedata
 import re
 from rapidfuzz import fuzz
-import yaml
+from io import BytesIO
 
 # -----------------------------
 # FONCTIONS UTILITAIRES
@@ -24,89 +26,93 @@ def fuzzy_compare(a, b, threshold=85):
     return score >= threshold, score
 
 # -----------------------------
-# LECTURE DU FICHIER DE CONFIG
+# FONCTION PRINCIPALE
 # -----------------------------
-with open("config.yaml", "r") as f:
-    config = yaml.safe_load(f)
+def process_files(file1, file2, config_file):
+    # Lecture config
+    config = yaml.safe_load(config_file)
+    key = config["key"]
+    strict_columns = config["strict_columns"]
+    fuzzy_columns = config["fuzzy_columns"]
+    threshold = config["fuzzy_threshold"]
 
-file_1 = config["file_1"]
-file_2 = config["file_2"]
-key = config["key"]
-strict_columns = config["strict_columns"]
-fuzzy_columns = config["fuzzy_columns"]
-threshold = config["fuzzy_threshold"]
-output_file = config["output_file"]
+    # Lecture fichiers Excel
+    df1 = pd.read_excel(file1, dtype=str)
+    df2 = pd.read_excel(file2, dtype=str)
 
-# -----------------------------
-# CHARGEMENT DES FICHIERS
-# -----------------------------
-df1 = pd.read_excel(file_1, dtype=str)
-df2 = pd.read_excel(file_2, dtype=str)
+    # Normalisation
+    for col in strict_columns + fuzzy_columns + [key]:
+        df1[col + "_norm"] = df1[col].astype(str).apply(normalize_text)
+        df2[col + "_norm"] = df2[col].astype(str).apply(normalize_text)
 
-# -----------------------------
-# NORMALISATION
-# -----------------------------
-for col in strict_columns + fuzzy_columns + [key]:
-    df1[col + "_norm"] = df1[col].astype(str).apply(normalize_text)
-    df2[col + "_norm"] = df2[col].astype(str).apply(normalize_text)
+    # Merge
+    df = df1.merge(df2, on=key, how="outer", suffixes=("_1", "_2"), indicator=True)
 
-# -----------------------------
-# MERGE
-# -----------------------------
-df = df1.merge(df2, on=key, how="outer", suffixes=("_1", "_2"), indicator=True)
+    # Comparaisons
+    comparisons = {}
+    scores = {}
+    for col in strict_columns:
+        comparisons[col] = df[col + "_norm_1"] == df[col + "_norm_2"]
+    for col in fuzzy_columns:
+        comp_list = []
+        score_list = []
+        for idx, row in df.iterrows():
+            val_1 = row.get(col + "_norm_1", "")
+            val_2 = row.get(col + "_norm_2", "")
+            comp, score = fuzzy_compare(val_1, val_2, threshold)
+            comp_list.append(comp)
+            score_list.append(score)
+        comparisons[col] = pd.Series(comp_list)
+        scores[col] = pd.Series(score_list)
 
-# -----------------------------
-# COMPARAISON
-# -----------------------------
-comparisons = {}
-scores = {}
+    # Ajout résultats
+    for col in strict_columns + fuzzy_columns:
+        df[f"{col}_identique"] = comparisons[col]
+    for col in fuzzy_columns:
+        df[f"{col}_score"] = scores[col]
 
-# Colonnes strictes
-for col in strict_columns:
-    comparisons[col] = df[col + "_norm_1"] == df[col + "_norm_2"]
+    # Statut général
+    def ligne_statut(row):
+        if row["_merge"] != "both":
+            return "Manquant"
+        cols_check = [f"{c}_identique" for c in strict_columns + fuzzy_columns]
+        if all(row[col] for col in cols_check):
+            return "OK"
+        else:
+            return "Différence"
 
-# Colonnes fuzzy
-for col in fuzzy_columns:
-    comp_list = []
-    score_list = []
-    for idx, row in df.iterrows():
-        val_1 = row.get(col + "_norm_1", "")
-        val_2 = row.get(col + "_norm_2", "")
-        comp, score = fuzzy_compare(val_1, val_2, threshold)
-        comp_list.append(comp)
-        score_list.append(score)
-    comparisons[col] = pd.Series(comp_list)
-    scores[col] = pd.Series(score_list)
+    df["statut"] = df.apply(ligne_statut, axis=1)
 
-# -----------------------------
-# AJOUT RESULTATS
-# -----------------------------
-for col in strict_columns + fuzzy_columns:
-    df[f"{col}_identique"] = comparisons[col]
-
-for col in fuzzy_columns:
-    df[f"{col}_score"] = scores[col]
-
-# -----------------------------
-# STATUT GENERAL
-# -----------------------------
-def ligne_statut(row):
-    if row["_merge"] != "both":
-        return "Manquant"
-    cols_check = [f"{c}_identique" for c in strict_columns + fuzzy_columns]
-    if all(row[col] for col in cols_check):
-        return "OK"
-    else:
-        return "Différence"
-
-df["statut"] = df.apply(ligne_statut, axis=1)
+    # Export Excel en mémoire
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df[df["statut"] == "OK"].to_excel(writer, sheet_name="Correspondances_OK", index=False)
+        df[df["statut"] == "Différence"].to_excel(writer, sheet_name="Différences", index=False)
+        df[df["statut"] == "Manquant"].to_excel(writer, sheet_name="Manquants", index=False)
+    output.seek(0)
+    return output
 
 # -----------------------------
-# EXPORT EXCEL
+# INTERFACE STREAMLIT
 # -----------------------------
-with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
-    df[df["statut"] == "OK"].to_excel(writer, sheet_name="Correspondances_OK", index=False)
-    df[df["statut"] == "Différence"].to_excel(writer, sheet_name="Différences", index=False)
-    df[df["statut"] == "Manquant"].to_excel(writer, sheet_name="Manquants", index=False)
+st.title("Rapprochement automatique Excel")
 
-print(f" Rapprochement terminé. Tu peux récuperer le résultat dans {output_file}")
+st.write("Téléversez vos fichiers Excel et le fichier de configuration YAML pour lancer le rapprochement.")
+
+file1 = st.file_uploader("Fichier 1 Excel", type=["xlsx"])
+file2 = st.file_uploader("Fichier 2 Excel", type=["xlsx"])
+config_file = st.file_uploader("Fichier config YAML", type=["yaml"])
+
+if file1 and file2 and config_file:
+    with st.spinner("Traitement en cours... ⏳"):
+        try:
+            output_file = process_files(file1, file2, config_file)
+            st.success("Rapprochement terminé ✅")
+            st.download_button(
+                "Télécharger le fichier résultat",
+                data=output_file,
+                file_name="resultat.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        except Exception as e:
+            st.error(f"Erreur lors du traitement : {e}")
