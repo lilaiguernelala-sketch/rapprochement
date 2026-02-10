@@ -1,0 +1,21 @@
+# -----------------------------
+# CONFIGURATION DU RAPROCHEMENT
+# -----------------------------
+
+file_1: "fichier_pegase.xlsx"
+file_2: "fichier_cegid.xlsx"
+
+key: "Matricule"
+
+strict_columns:
+  - Agence
+  - Nom
+  - Prenom
+  - Code postal
+
+fuzzy_columns:
+  - Adresse
+
+fuzzy_threshold: 85
+
+output_file: "rapprochement_resultat2.xlsx"
