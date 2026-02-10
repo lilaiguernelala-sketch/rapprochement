@@ -129,9 +129,8 @@ st.write(
 file1 = st.file_uploader("📄 Fichier Excel 1", type=["xlsx"])
 file2 = st.file_uploader("📄 Fichier Excel 2", type=["xlsx"])
 
-if file1 and file2 and config_file:
-    with st.spinner("⏳ Patientez... La personne tourne en rond et n'aime pas attendre 😅"):
-        st.image("https://media.giphy.com/media/3o7TKtnuHOHHUjR38Y/giphy.gif", width=120)
+if file1 and file2:
+    with st.spinner("⏳ Traitement en cours..."):
         try:
             output_file = process_files(file1, file2)
             st.success("✅ Rapprochement terminé avec succès")
@@ -143,5 +142,6 @@ if file1 and file2 and config_file:
             )
         except Exception as e:
             st.error(str(e))
+
 
 
