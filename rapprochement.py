@@ -95,16 +95,16 @@ def process_files(file1, file2, config_file):
 # -----------------------------
 # INTERFACE STREAMLIT
 # -----------------------------
-st.title("Rapprochement automatique Excel")
+st.title("Rapprochement automatique CEGID VS PEGASE Excel")
 
-st.write("Téléversez vos fichiers Excel et le fichier de configuration YAML pour lancer le rapprochement.")
+st.write("Téléversez le fichier 1 (PEGASE) et le fichier 2 (CEGID), c'est important de respecter l'ordre :) et le fichier de configuration YAML (que je vais envoyer par mail si besoin de tester ;) ) pour lancer le rapprochement.")
 
-file1 = st.file_uploader("Fichier 1 Excel", type=["xlsx"])
-file2 = st.file_uploader("Fichier 2 Excel", type=["xlsx"])
+file1 = st.file_uploader("Fichier Excel 1 PEGASE", type=["xlsx"])
+file2 = st.file_uploader("Fichier Excel 2 CEGID", type=["xlsx"])
 config_file = st.file_uploader("Fichier config YAML", type=["yaml"])
 
 if file1 and file2 and config_file:
-    with st.spinner("Traitement en cours... ⏳"):
+    with st.spinner("Patientez 2 à 3 secondes, traitement en cours... ⏳"):
         try:
             output_file = process_files(file1, file2, config_file)
             st.success("Rapprochement terminé ✅")
@@ -115,4 +115,5 @@ if file1 and file2 and config_file:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
         except Exception as e:
-            st.error(f"Erreur lors du traitement : {e}")
+            st.error(f"OUPSSSS, Erreur lors du traitement : {e}")
+
