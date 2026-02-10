@@ -123,6 +123,9 @@ file2 = st.file_uploader("📄 Fichier Excel 2", type=["xlsx"])
 
 if file1 and file2:
     with st.spinner("⏳ Traitement en cours..."):
+    st.image("https://media.giphy.com/media/3o7TKtnuHOHHUjR38Y/giphy.gif", width=100)
+    output_file = process_files(file1, file2)
+
         try:
             output_file = process_files(file1, file2)
             st.success("✅ Rapprochement terminé avec succès")
@@ -134,3 +137,4 @@ if file1 and file2:
             )
         except Exception as e:
             st.error(f"❌ Erreur : {e}")
+
