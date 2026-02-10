@@ -130,9 +130,8 @@ file1 = st.file_uploader("📄 Fichier Excel 1", type=["xlsx"])
 file2 = st.file_uploader("📄 Fichier Excel 2", type=["xlsx"])
 
 if file1 and file2:
-    with st.spinner("⏳ Traitement en cours..."):
+    with st.spinner("⏳ **Traitement en cours...** "):
         st.markdown("""
-        **Traitement en cours…**  
         <marquee>💓💓💓💓💓</marquee>
         """, unsafe_allow_html=True)
 
@@ -148,6 +147,7 @@ if file1 and file2:
             )
         except Exception as e:
             st.error(str(e))
+
 
 
 
