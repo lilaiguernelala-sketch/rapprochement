@@ -120,7 +120,7 @@ def process_files(file1, file2):
 # -----------------------------
 st.set_page_config(page_title="Rapprochement automatique", layout="centered")
 
-st.title("🧩 Rapprochement automatique Excel")
+st.title("❤️ Rapprochement automatique Excel")
 st.write(
     "Téléversez **deux fichiers Excel**. "
     "Les règles de rapprochement sont gérées automatiquement."
@@ -134,6 +134,7 @@ if file1 and file2:
         try:
             output_file = process_files(file1, file2)
             st.success("✅ Rapprochement terminé avec succès")
+            st.balloons()
             st.download_button(
                 "📥 Télécharger le fichier résultat",
                 data=output_file,
@@ -142,6 +143,7 @@ if file1 and file2:
             )
         except Exception as e:
             st.error(str(e))
+
 
 
 
