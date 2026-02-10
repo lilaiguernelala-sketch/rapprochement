@@ -157,3 +157,4 @@ def process_files(file1, file2):
         except Exception as e:
             st.error(str(e))
             st.error(f"❌ Erreur : {e}")
+
